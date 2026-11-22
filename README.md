@@ -1,73 +1,86 @@
 # 24/365 모델 후속 실험
 
-2025년 24/365 팀 프로젝트에서 다룬 화염·연기 객체 탐지 문제를 이어서 검증하는 독립 저장소다. YOLO11s를 학습하고, 고정한 테스트 데이터에서 클래스별 성능과 실패 사례를 기록한다. 실험은 준비 단계이며 후속 성능값은 아직 없다.
+2025년 24/365는 영상에서 화염과 연기를 찾아 조기 감지에 활용하기 위한 팀 프로젝트였다. 당시 프로젝트는 친구의 GitHub 저장소에 최종본이 남아 있으며, 로컬 `24365-MASAN-STRRET-main` 폴더가 그 스냅샷이다. 이 저장소는 2026년 후속 모델 실험을 기록한다. [포트폴리오 계획](PORTFOLIO_PLAN.md)
 
-[포트폴리오 계획](PORTFOLIO_PLAN.md)에 원래 팀 프로젝트의 증거, 실험 범위, Featured 공개 기준을 정리했다.
+## 구조
 
-## 맥북에서 준비
+| 경로 | 역할 |
+|---|---|
+| `wildfire/__main__.py` | 데이터 점검, 학습, 평가 명령과 실행 기록 |
+| `wildfire/dataset.py` | YOLO 라벨 검증, 분할별 집계, 이미지·라벨 SHA-256 |
+| `wildfire/evaluation.py` | Ultralytics AP와 고정 confidence에서의 TP·FP·FN, 오류 예시 |
+| `data.example.yaml` | 실제 export의 경로·클래스 ID를 옮겨 적을 예시 |
+| `tests/` | 데이터 분할과 탐지 매칭의 회귀 테스트 |
+| `runs/` | 로컬 실행 산출물 |
 
-이 디렉터리를 새 GitHub 저장소의 루트로 사용한다. Python 3.12를 기준으로 준비하고, 기존 팀 프로젝트 폴더나 인증 파일을 복사하지 않는다.
+## 환경
+
+저장소 루트에서 Bash 또는 Zsh로 실행한다. Python 3.12를 사용한다. 학교의 NVIDIA 워크스테이션에서는 먼저 `nvidia-smi`를 확인하고, 가상환경을 활성화한 뒤 장비와 드라이버에 맞는 PyTorch·torchvision을 설치한다. 맥북에서 테스트할 때는 아래 설정 후 `--device cpu`를 사용할 수 있다. [PyTorch 설치 안내](https://docs.pytorch.org/get-started/locally/)
 
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-yolo version
-```
-
-Ultralytics는 기존 체크포인트에 기록된 버전인 `8.3.220`으로 고정했다. PyTorch 빌드는 장비에 맞춰 선택하고, 실제 학습 시 설치된 버전 전체를 실행 기록에 남긴다. [Ultralytics 8.3.220](https://pypi.org/project/ultralytics/8.3.220/)
-
-첫 커밋 전에는 이 디렉터리에서 `git status --short --untracked-files=all`로 공개 대상 파일을 확인한다. 첫 커밋을 만든 뒤 학교 워크스테이션에서 접근 가능한 GitHub 저장소에 올린다.
-
-## 학교 워크스테이션에서 준비
-
-1. 이 저장소를 클론하고 Python 3.12 가상환경을 만든다. 아래 예시는 Bash/Zsh 기준이다.
-2. `nvidia-smi`로 GPU와 드라이버를 확인한다. 가상환경에서 OS와 GPU에 맞는 PyTorch 및 torchvision을 먼저 설치한 뒤 프로젝트 의존성을 설치한다. [PyTorch 설치 안내](https://docs.pytorch.org/get-started/locally/)
-3. Roboflow v2를 YOLO 형식으로 내보낸 뒤, export의 `data.yaml`을 확인해 로컬 설정을 만든다. `data.example.yaml`은 디렉터리 구조 예시다. `path`를 실제 절대 경로로 바꾸고 `train`, `val`, `test`와 `names`의 ID 순서를 export와 대조한다. 압축을 풀거나 폴더를 옮겼다면 각 경로에 이미지와 대응 라벨이 있는지 확인한다. [Roboflow v2](https://universe.roboflow.com/middle-east-tech-university/fire-and-smoke-detection-hiwia/dataset/2)
-
-```bash
-nvidia-smi
-python -m pip install -r requirements.txt
 python -m pip check
+python -m unittest discover -s tests -v
+```
+
+워크스테이션에서 GPU를 쓸 때는 다음 출력에 GPU 이름이 나오는지 확인한다.
+
+```bash
 python -c 'import torch; assert torch.cuda.is_available(), "CUDA unavailable"; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0))'
+```
+
+## 1. 데이터 확인
+
+Roboflow v2를 YOLO 형식으로 받아 `train/images`, `valid/images`, `test/images` 및 각 `labels` 폴더가 있는 위치에 압축을 푼다. 아래 명령 뒤 **로컬 `data.yaml`**의 `path`와 분할 경로를 수정한다. `names`의 숫자와 클래스 매핑은 예시 파일의 순서를 그대로 쓰기 전에 실제 export와 대조한다. [Roboflow v2](https://universe.roboflow.com/middle-east-tech-university/fire-and-smoke-detection-hiwia/dataset/2)
+
+```bash
 cp data.example.yaml data.yaml
+# data.yaml을 편집한 뒤 실행
+python -m wildfire check-data --data data.yaml
 ```
 
-`data.yaml`은 수정 후 사용한다. 데이터, 로컬 경로 설정, 인증 정보, 가중치와 실행 결과는 Git에서 제외한다.
+이미지와 라벨의 대응, 클래스 ID, 좌표, 분할별 이미지·객체 수, **바이트가 같은 이미지의 분할 간 중복**을 확인한다. 배경 이미지로 확인한 경우 대응 위치에 내용이 없는 라벨 파일을 둔다. 화면이 비슷하거나 같은 영상에서 나온 재인코딩 프레임은 별도로 확인해야 한다. 라벨이나 분할을 바꿀 때는 새 데이터 버전과 새 폴더를 사용한다. Ultralytics가 만든 라벨 캐시까지 기존 경로에 남아 있으면 변경 전 파일을 읽을 수 있다.
 
-## 짧은 실행으로 확인
+## 2. 학습
+
+학교 GPU에서 3 epochs로 데이터 로딩과 메모리 사용량, 라벨 시각화, epoch 시간을 확인한다. 아래 장비 번호 `0`은 현재 환경에서 첫 번째로 보이는 CUDA GPU다.
 
 ```bash
-yolo detect train model=yolo11s.pt data=data.yaml device=0 \
-  imgsz=640 batch=8 epochs=3 seed=0 project=runs name=smoke-test
+python -m wildfire train --data data.yaml --dataset-version roboflow-v2 \
+  --device 0 --epochs 3 --name pilot-yolo11s
 ```
 
-완료 기준은 GPU에서 학습과 검증이 진행되고, 학습 배치 이미지의 클래스·박스가 올바르며 `results.csv`와 가중치가 생성되는 것이다. 두 번째·세 번째 epoch의 시간과 최대 메모리 사용량을 보고 본 학습 예산을 정한다. `batch=8`은 시작값이다.
-
-## 본 학습과 테스트
-
-아래는 **50 epochs로 시작하는 예시**다. 짧은 실행을 보고 batch와 epoch 예산을 결정한다. 새 학습을 시작할 때는 깨끗한 커밋을 사용하고 실제 실행 명령을 보관한다.
+반복 실행에는 새 이름을 사용한다. 시험 실행을 보고 읽은 두 클래스와 메모리 사용량에 문제가 없으면 본 학습을 진행한다. 아래의 50 epochs와 batch 8은 시작값이다. YOLO11s 사전학습 가중치는 첫 실행 시 다운로드되므로 학교 장비의 네트워크 접근을 확인하거나, 공식 가중치 파일을 준비한 뒤 `--model`에 경로를 지정한다.
 
 ```bash
-RUN_ID="yolo11s-$(date +%Y%m%d-%H%M%S)"
-mkdir -p runs
-set -o pipefail
-yolo detect train model=yolo11s.pt data=data.yaml device=0 \
-  imgsz=640 batch=8 epochs=50 seed=0 project=runs name="$RUN_ID" \
-  2>&1 | tee "runs/$RUN_ID.train.log"
-
-git rev-parse HEAD > "runs/$RUN_ID/git-commit.txt"
-python -m pip freeze > "runs/$RUN_ID/environment.txt"
-nvidia-smi > "runs/$RUN_ID/gpu.txt"
+python -m wildfire train --data data.yaml --dataset-version roboflow-v2 \
+  --device 0 --epochs 50 --batch 8 --name yolo11s-baseline
 ```
 
-validation 데이터에서 모델과 운영 confidence를 고르고 기록한 뒤, 고정한 test split을 최종 평가한다. 아래 명령은 **AP 집계용**이며 운영 confidence에서의 재현율은 선택한 임계값을 명시해 별도로 계산한다. 학습을 끝낸 디렉터리 외에서 실행한다면 `RUN_ID`를 실제 학습 폴더 이름으로 설정한다. [Ultralytics 평가 문서](https://docs.ultralytics.com/modes/val/)
+## 3. 평가
+
+validation split에서 운영 confidence를 고른다. 예시 명령의 `0.25`는 비교 출발점이다. 선정 후 test split에서 평가하고, 두 분할의 해석을 구분해 기록한다.
 
 ```bash
-yolo detect val model="runs/$RUN_ID/weights/best.pt" data=data.yaml \
-  split=test device=0 imgsz=640 batch=8 verbose=True plots=True \
-  project="runs/$RUN_ID" name=test \
-  2>&1 | tee "runs/$RUN_ID/test.log"
+python -m wildfire evaluate --data data.yaml --dataset-version roboflow-v2 \
+  --weights runs/yolo11s-baseline/train/weights/best.pt \
+  --device 0 --split val --confidence 0.25 --name yolo11s-val-c025
+
+# 아래 값은 validation에서 정한 confidence로 교체한다.
+CONFIDENCE=0.25
+python -m wildfire evaluate --data data.yaml --dataset-version roboflow-v2 \
+  --weights runs/yolo11s-baseline/train/weights/best.pt \
+  --device 0 --split test --confidence "$CONFIDENCE" --name yolo11s-test
 ```
 
-실험이 끝나면 학습 로그, 실행 폴더, 사용한 데이터 버전·분할 목록, `data.yaml` 사본과 평가 결과를 학교에서 허용된 저장소에 백업한다. 포트폴리오에 인용할 때는 가중치와 데이터의 SHA-256 또는 변경되지 않는 버전 식별자도 기록한다.
+- **AP**는 Ultralytics 평가기로 계산한다. `metrics.json`에 전체 mAP와 클래스별 AP, `ap/`에 PR 곡선 등 평가 그림이 저장된다. [Ultralytics 평가 문서](https://docs.ultralytics.com/modes/val/)
+- **고정 confidence 지표**는 해당 임계값으로 다시 추론해 계산한다. 높은 confidence의 예측부터 같은 클래스의 아직 매칭되지 않은 정답 중 최대 IoU가 0.50 이상인 박스에 일대일로 연결한다. 분모가 0인 지표는 `null`이다.
+- `errors.jsonl`에 모든 FP·FN 좌표가 들어 있다. `examples/`에는 경로 순서상 첫 오류 이미지가 기본 12장까지 저장된다. 이 이미지들은 검토 출발점이다. 사례를 고를 때는 오류 기록과 원본 라벨을 함께 확인한다.
+
+## 실행 증거 보관
+
+각 실행에 `run.json`의 커밋 SHA, 명령, 장비와 가중치 해시, `dataset.json`의 분할 및 데이터 지문, `environment.txt`의 패키지 버전이 저장된다. `train/`에는 `args.yaml`, `results.csv`, `weights/best.pt`가 생성된다. 실행 폴더를 보관하면 결과 표를 만든 조건과 가중치를 다시 확인할 수 있다.
+
+데이터, 학습 결과, 로컬 설정, 가중치는 Git 제외 대상이다. 학교에서 허용한 장소에 실행 산출물을 백업하고, 공개할 때는 원본 이미지의 이용 권한과 로컬 절대 경로의 노출 여부를 확인한다.
