@@ -1,0 +1,10 @@
+# 압축을 푼 데이터셋 루트의 절대 경로로 바꾼다.
+path: /absolute/path/to/fire-and-smoke-v2
+train: train/images
+val: valid/images
+test: test/images
+
+# 예시 매핑이다. Roboflow export의 data.yaml과 실제 라벨 ID를 확인해 교체한다.
+names:
+  0: fire
+  1: smoke
