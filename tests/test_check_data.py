@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 from PIL import Image
 
-from wildfire.dataset import load_dataset
+from wildfire_detection.check_data import load_dataset
 
 
 class DatasetTests(unittest.TestCase):

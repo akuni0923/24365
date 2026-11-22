@@ -1,0 +1,7 @@
+model: yolo11s.pt
+imgsz: 640
+batch: 8
+epochs: 50
+workers: 0
+seed: 0
+deterministic: true

@@ -1,5 +1,6 @@
 """Validate and fingerprint the YOLO detection dataset used by an experiment."""
 
+import argparse
 import hashlib
 import json
 import math
@@ -149,3 +150,19 @@ def load_dataset(config_path):
     if any(count == 0 for count in counts["train"]["instances"].values()):
         raise ValueError("The training split needs at least one instance of each class.")
     return Dataset(root, names, images, counts)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data", type=Path, default=Path("data.yaml"))
+    args = parser.parse_args()
+    try:
+        manifest = load_dataset(args.data).manifest()
+        summary = {key: manifest[key] for key in ("sha256", "classes", "counts")}
+        print(json.dumps(summary, indent=2))
+    except (OSError, ValueError, yaml.YAMLError) as error:
+        parser.exit(1, f"error: {error}\n")
+
+
+if __name__ == "__main__":
+    main()

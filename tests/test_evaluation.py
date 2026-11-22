@@ -1,6 +1,6 @@
 import unittest
 
-from wildfire.evaluation import Box, iou, match_detections, summarize_counts
+from wildfire_detection.evaluate import Box, iou, match_detections, summarize_counts
 
 
 class EvaluationTests(unittest.TestCase):
