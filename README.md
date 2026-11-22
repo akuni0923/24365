@@ -2,10 +2,21 @@
 
 2025년 24/365는 영상에서 화염과 연기를 찾아 조기 감지에 활용하기 위한 팀 프로젝트였다. 당시 프로젝트는 친구의 GitHub 저장소에 최종본이 남아 있으며, 로컬 `24365-MASAN-STRRET-main` 폴더가 그 스냅샷이다. 이 저장소는 2026년 후속 모델 실험을 기록한다. [포트폴리오 계획](PORTFOLIO_PLAN.md)
 
+## 노트북으로 실험
+
+[24/365 실험 노트북](notebooks/24365_model_followup.ipynb)에서 라벨 박스를 확인하고, 학습을 실행하고, 클래스별 평가와 오탐·미탐 이미지를 볼 수 있다. 아래 환경·데이터 설정을 끝낸 뒤, 가상환경에 `ipykernel`을 설치하고 노트북의 커널로 이 프로젝트의 `.venv`를 선택한다.
+
+```bash
+python -m pip install ipykernel
+```
+
+노트북에서 데이터 확인 셀부터 실행한다. 학습과 평가는 각 셀의 실행 변수를 직접 켤 때 시작된다. 노트북은 아래 Terminal 명령과 같은 학습·평가 모듈을 호출하고 결과를 동일한 `runs/` 위치에 저장한다. [IPython 커널 설치 안내](https://ipython.readthedocs.io/en/stable/install/kernel_install.html)
+
 ## 구조
 
 | 경로 | 역할 |
 |---|---|
+| `notebooks/24365_model_followup.ipynb` | 라벨 시각화, 셀 단위 실행, 임계값 선택, 결과와 오류 예시 검토 |
 | `wildfire/__main__.py` | 데이터 점검, 학습, 평가 명령과 실행 기록 |
 | `wildfire/dataset.py` | YOLO 라벨 검증, 분할별 집계, 이미지·라벨 SHA-256 |
 | `wildfire/evaluation.py` | Ultralytics AP와 고정 confidence에서의 TP·FP·FN, 오류 예시 |
